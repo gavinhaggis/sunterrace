@@ -1,0 +1,473 @@
+/* ── Layout ───────────────────────────────────────────── */
+.app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e5e7eb;
+  background: #fff;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.map-container {
+  flex: 1;
+  position: relative;
+}
+
+/* ── Sidebar header ───────────────────────────────────── */
+.sidebar-header {
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.app-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.app-subtitle {
+  font-size: 0.7rem;
+  color: #6b7280;
+  margin: 2px 0 0;
+}
+
+/* ── Sidebar sections ─────────────────────────────────── */
+.sidebar-section {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.sidebar-hint {
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  color: #9ca3af;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+/* ── Date picker ──────────────────────────────────────── */
+.datetime-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.datetime-picker label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+}
+
+.datetime-picker input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #111827;
+  outline: none;
+  background: #fff;
+}
+
+.datetime-picker input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+}
+
+/* ── Search bar ───────────────────────────────────────── */
+.search-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 5px 8px;
+  background: #f9fafb;
+}
+
+.search-input-wrap:focus-within {
+  border-color: #3b82f6;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+}
+
+.search-icon { font-size: 0.8rem; color: #9ca3af; }
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.85rem;
+  color: #111827;
+  min-width: 0;
+}
+
+.search-input::placeholder { color: #9ca3af; }
+
+.search-clear {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.search-clear:hover { color: #374151; }
+
+.search-count {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  text-align: right;
+}
+
+/* ── Filter bar ───────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.filter-pill {
+  padding: 3px 10px;
+  border-radius: 99px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+
+.filter-pill:hover { background: #f3f4f6; }
+
+.filter-pill.active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+
+.filter-chip {
+  padding: 2px 9px;
+  border-radius: 99px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  font-size: 0.72rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+
+.filter-chip:hover { background: #f9fafb; }
+
+.filter-chip.active {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #065f46;
+}
+
+/* ── Sun panel ────────────────────────────────────────── */
+.sun-panel {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  border-left: 3px solid transparent;
+}
+
+.sun-panel.sunny         { background: #fffbeb; border-left-color: #f59e0b; }
+.sun-panel.blocked       { background: #f9fafb; border-left-color: #6b7280; }
+.sun-panel.below_horizon { background: #eff6ff; border-left-color: #3b82f6; }
+.sun-panel.loading       { background: #f9fafb; border-left-color: #d1d5db; }
+.sun-panel.error         { background: #fef2f2; border-left-color: #ef4444; }
+
+.sun-panel-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sun-panel-status {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 3px;
+}
+
+.sun-icon { margin-right: 2px; }
+
+.sun-details {
+  display: flex;
+  gap: 10px;
+  font-size: 0.7rem;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.sun-windows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.sun-windows-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  width: 100%;
+}
+
+.sun-window-chip {
+  display: inline-block;
+  background: #fef9c3;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 99px;
+}
+
+.sun-panel-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 99px;
+}
+
+.badge-terrace        { background: #dcfce7; color: #166534; }
+.badge-no-terrace     { background: #fef2f2; color: #991b1b; }
+.badge-unknown        { background: #f3f4f6; color: #6b7280; }
+.badge-type           { background: #eff6ff; color: #1d4ed8; text-transform: capitalize; }
+
+/* ── Sun timeline ─────────────────────────────────────── */
+.sun-timeline-section {
+  margin: 6px 0;
+}
+
+.sun-timeline-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sun-timeline-svg {
+  width: 100%;
+  height: 50px;
+  display: block;
+  border-radius: 4px;
+  overflow: visible;
+}
+
+.sun-timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.sun-timeline-no-sun {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* ── Details toggle ───────────────────────────────────── */
+.details-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  padding: 6px 0 2px;
+  font-size: 0.72rem;
+  color: #6b7280;
+  cursor: pointer;
+  text-align: left;
+}
+
+.details-toggle:hover { color: #374151; }
+
+.sun-diagram-wrap {
+  margin-top: 4px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+/* ── Terrace list ─────────────────────────────────────── */
+.terrace-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.terrace-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.1s;
+}
+
+.terrace-item:hover    { background: #f9fafb; }
+.terrace-item.selected { background: #eff6ff; }
+
+.terrace-info { min-width: 0; flex: 1; }
+
+.terrace-name {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.terrace-item.no-seating .terrace-name { color: #9ca3af; }
+
+.terrace-address {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.terrace-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 3px;
+}
+
+.chip {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: 99px;
+}
+
+.chip-no-seating     { background: #fef2f2; color: #b91c1c; }
+.chip-unknown-seating{ background: #f3f4f6; color: #9ca3af; }
+.chip-sun-ending     { background: #fff7ed; color: #c2410c; }
+
+/* ── Status dot ───────────────────────────────────────── */
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.status-sunny         { background: #f59e0b; }
+.status-dot.status-blocked       { background: #6b7280; }
+.status-dot.status-below_horizon { background: #3b82f6; }
+.status-dot.status-unknown       { background: #e5e7eb; border: 1px solid #d1d5db; }
+
+/* Mobile drag handle (hidden on desktop) */
+.sheet-handle { display: none; }
+
+/* ── MapLibre popup ───────────────────────────────────── */
+.maplibregl-popup-content {
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* ── Mobile: bottom sheet ─────────────────────────────── */
+@media (max-width: 768px) {
+  .app {
+    flex-direction: column;
+    height: 100dvh;
+  }
+
+  .map-container {
+    position: fixed;
+    inset: 0;
+    height: 100dvh;
+    width: 100%;
+  }
+
+  .sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 85dvh;
+    border-radius: 16px 16px 0 0;
+    border-right: none;
+    border-top: 1px solid #e5e7eb;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+    transform: translateY(calc(100% - 56px));
+    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .sidebar.sheet-open {
+    transform: translateY(0);
+  }
+
+  .sheet-handle {
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: #d1d5db;
+    border-radius: 99px;
+    margin: 10px auto 6px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  /* Ensure list items are finger-friendly */
+  .terrace-item { padding: 12px 16px; min-height: 48px; }
+  .datetime-picker input { font-size: 1rem; }
+  .search-input { font-size: 1rem; }
+}
