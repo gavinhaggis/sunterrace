@@ -48,15 +48,17 @@ export default function App() {
   }, []);
 
   // Recolour all map markers whenever precomputed data arrives or datetime changes.
-  // Precise Overpass results are intentionally replaced here because a datetime change
-  // makes any previously-fetched result stale.
+  // Debounced 150ms so rapid datetime scrubbing doesn't thrash the status loop.
   useEffect(() => {
     if (!precomputedReady) return;
-    const next: Record<string, SunlightStatus> = {};
-    for (const venue of ALL_VENUES) {
-      next[venue.id] = getStatusFromPrecomputed(venue.id, venue.lat, venue.lon, datetime);
-    }
-    setStatusMap(next);
+    const id = setTimeout(() => {
+      const next: Record<string, SunlightStatus> = {};
+      for (const venue of ALL_VENUES) {
+        next[venue.id] = getStatusFromPrecomputed(venue.id, venue.lat, venue.lon, datetime);
+      }
+      setStatusMap(next);
+    }, 150);
+    return () => clearTimeout(id);
   }, [precomputedReady, datetime]);
 
   const filteredVenues = useMemo(() => {
@@ -106,6 +108,9 @@ export default function App() {
   const venueList = customPin
     ? [customPin, ...filteredVenues]
     : filteredVenues;
+
+  const MAX_LIST = 200;
+  const displayList = venueList.slice(0, MAX_LIST);
 
   return (
     <div className="app">
@@ -158,7 +163,7 @@ export default function App() {
         )}
 
         <ul className="terrace-list">
-          {venueList.map(venue => {
+          {displayList.map(venue => {
             const status: SunlightStatus = statusMap[venue.id] ?? 'unknown';
             const preWindows: SunlightWindow[] = precomputedReady
               ? getPrecomputedWindows(venue.id, datetime)
@@ -198,6 +203,11 @@ export default function App() {
               </li>
             );
           })}
+          {venueList.length > MAX_LIST && (
+            <li className="terrace-list-overflow">
+              Showing {MAX_LIST} of {venueList.length} venues — use filters or search to narrow results.
+            </li>
+          )}
         </ul>
       </aside>
 

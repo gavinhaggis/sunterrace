@@ -1,9 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import type { Venue } from '../types';
-
-type SunlightStatus = 'sunny' | 'blocked' | 'below_horizon' | 'unknown';
+import type { Venue, SunlightStatus } from '../types';
 
 const STATUS_COLOR: Record<SunlightStatus, string> = {
   sunny:         '#f59e0b',
@@ -21,29 +19,6 @@ interface Props {
   onMapClick: (lat: number, lon: number) => void;
 }
 
-function makeDotMarker(color: string, size: number, selected: boolean): HTMLElement {
-  // Outer wrapper: MapLibre anchors this element — never apply transform here
-  const wrapper = document.createElement('div');
-  wrapper.style.cssText = `width:${size + 6}px;height:${size + 6}px;display:flex;align-items:center;justify-content:center;cursor:pointer`;
-
-  // Inner dot: safe to scale on hover
-  const dot = document.createElement('div');
-  dot.style.cssText = [
-    `width:${size}px`,
-    `height:${size}px`,
-    'border-radius:50%',
-    `background:${color}`,
-    `border:${selected ? '3px' : '2px'} solid white`,
-    'box-shadow:0 1px 5px rgba(0,0,0,0.35)',
-    'transition:transform 0.15s',
-  ].join(';');
-
-  wrapper.addEventListener('mouseenter', () => { dot.style.transform = 'scale(1.3)'; });
-  wrapper.addEventListener('mouseleave', () => { dot.style.transform = 'scale(1)'; });
-  wrapper.appendChild(dot);
-  return wrapper;
-}
-
 function makePinMarker(): HTMLElement {
   const wrapper = document.createElement('div');
   wrapper.style.cssText = 'width:28px;height:36px;cursor:crosshair';
@@ -56,18 +31,63 @@ function makePinMarker(): HTMLElement {
   return wrapper;
 }
 
+function buildGeoJSON(
+  terraces: Venue[],
+  statusMap: Record<string, SunlightStatus>,
+  selectedId: string | null,
+) {
+  return {
+    type: 'FeatureCollection' as const,
+    features: terraces
+      .filter(v => !v.isPin)
+      .map(v => ({
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: [v.lon, v.lat] as [number, number] },
+        properties: {
+          id: v.id,
+          name: v.name,
+          label: v.address || v.city,
+          color: STATUS_COLOR[statusMap[v.id] ?? 'unknown'],
+          selected: v.id === selectedId,
+        },
+      })),
+  };
+}
+
+const SOURCE_ID = 'venues';
+const LAYER_ID  = 'venues-circles';
+
 export function TerracesMap({
   terraces, statusMap, selectedId, onTerraceSelect, customPin, onMapClick,
 }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-  const markersRef = useRef<maplibregl.Marker[]>([]);
-  const pinMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const containerRef  = useRef<HTMLDivElement>(null);
+  const mapRef        = useRef<maplibregl.Map | null>(null);
+  const mapReadyRef   = useRef(false);
+  const pinMarkerRef  = useRef<maplibregl.Marker | null>(null);
 
-  // Stable ref so the click handler never goes stale
+  // Stable refs so async callbacks never capture stale closures
+  const onTerraceSelectRef = useRef(onTerraceSelect);
+  useEffect(() => { onTerraceSelectRef.current = onTerraceSelect; }, [onTerraceSelect]);
   const onMapClickRef = useRef(onMapClick);
   useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
 
+  // Venue lookup by id
+  const venueByIdRef = useRef<Map<string, Venue>>(new Map());
+  useEffect(() => {
+    const m = new Map<string, Venue>();
+    for (const v of terraces) m.set(v.id, v);
+    venueByIdRef.current = m;
+  }, [terraces]);
+
+  // Snapshot refs used to seed the source on first map load
+  const terracesRef  = useRef(terraces);
+  const statusMapRef = useRef(statusMap);
+  const selectedIdRef = useRef(selectedId);
+  useEffect(() => { terracesRef.current  = terraces;  }, [terraces]);
+  useEffect(() => { statusMapRef.current = statusMap; }, [statusMap]);
+  useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
+
+  // Map initialisation (runs once)
   useEffect(() => {
     if (!containerRef.current) return;
     const map = new maplibregl.Map({
@@ -78,52 +98,86 @@ export function TerracesMap({
     });
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
+    map.on('load', () => {
+      // Single GeoJSON source + WebGL circle layer replaces 2805 DOM markers
+      map.addSource(SOURCE_ID, {
+        type: 'geojson',
+        generateId: true,
+        data: buildGeoJSON(terracesRef.current, statusMapRef.current, selectedIdRef.current),
+      });
+      map.addLayer({
+        id: LAYER_ID,
+        type: 'circle',
+        source: SOURCE_ID,
+        paint: {
+          'circle-radius':        ['case', ['get', 'selected'], 9, 7],
+          'circle-color':         ['get', 'color'],
+          'circle-stroke-width':  ['case', ['get', 'selected'], 3, 2],
+          'circle-stroke-color':  'white',
+        },
+      });
+
+      mapReadyRef.current = true;
+
+      // Click a venue circle
+      map.on('click', LAYER_ID, e => {
+        if (!e.features?.[0]) return;
+        (e.originalEvent as PointerEvent & { _markerHandled?: boolean })._markerHandled = true;
+        const id = e.features[0].properties?.id as string;
+        const venue = venueByIdRef.current.get(id);
+        if (venue) onTerraceSelectRef.current(venue);
+      });
+
+      // Hover popup (desktop only — no touch penalty)
+      const popup = new maplibregl.Popup({ offset: 12, closeButton: false, closeOnClick: false });
+      map.on('mouseenter', LAYER_ID, e => {
+        map.getCanvas().style.cursor = 'pointer';
+        if (!e.features?.[0]) return;
+        const { name, label } = e.features[0].properties as { name: string; label: string };
+        const [lng, lat] = (e.features[0].geometry as { coordinates: number[] }).coordinates;
+        popup.setLngLat([lng, lat])
+          .setHTML(`<strong>${name}</strong><br/><small>${label}</small>`)
+          .addTo(map);
+      });
+      map.on('mouseleave', LAYER_ID, () => {
+        map.getCanvas().style.cursor = '';
+        popup.remove();
+      });
+    });
+
+    // Background tap → drop a custom pin
     map.on('click', e => {
       if ((e.originalEvent as PointerEvent & { _markerHandled?: boolean })._markerHandled) return;
       onMapClickRef.current(e.lngLat.lat, e.lngLat.lng);
     });
 
     mapRef.current = map;
-    return () => { map.remove(); mapRef.current = null; };
+    return () => {
+      mapReadyRef.current = false;
+      map.remove();
+      mapRef.current = null;
+    };
   }, []);
 
-  // Terrace markers
+  // Update WebGL data whenever markers need recolouring (no DOM churn)
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !mapReadyRef.current) return;
+    (map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined)
+      ?.setData(buildGeoJSON(terraces, statusMap, selectedId));
+  }, [terraces, statusMap, selectedId]);
 
-    markersRef.current.forEach(m => m.remove());
-    markersRef.current = [];
-
-    terraces.forEach(venue => {
-      const status: SunlightStatus = statusMap[venue.id] ?? 'unknown';
-      const isSelected = venue.id === selectedId;
-      const el = makeDotMarker(STATUS_COLOR[status], isSelected ? 18 : 14, isSelected);
-
-      el.addEventListener('click', e => {
-        (e as PointerEvent & { _markerHandled?: boolean })._markerHandled = true;
-        e.stopPropagation();
-        onTerraceSelect(venue);
-      });
-
-      const popup = new maplibregl.Popup({ offset: 16, closeButton: false })
-        .setHTML(`<strong>${venue.name}</strong><br/><small>${venue.address || venue.city}</small>`);
-
-      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-        .setLngLat([venue.lon, venue.lat])
-        .setPopup(popup)
-        .addTo(map);
-
-      markersRef.current.push(marker);
-    });
-  }, [terraces, statusMap, selectedId, onTerraceSelect]);
-
-  // Custom pin marker
+  // Custom pin — single DOM marker, negligible cost
   const updatePin = useCallback((map: maplibregl.Map) => {
     pinMarkerRef.current?.remove();
     pinMarkerRef.current = null;
     if (!customPin) return;
     const el = makePinMarker();
+    el.addEventListener('click', e => {
+      (e as PointerEvent & { _markerHandled?: boolean })._markerHandled = true;
+      e.stopPropagation();
+      onTerraceSelectRef.current(customPin);
+    });
     pinMarkerRef.current = new maplibregl.Marker({ element: el, anchor: 'bottom' })
       .setLngLat([customPin.lon, customPin.lat])
       .addTo(map);
