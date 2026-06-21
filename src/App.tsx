@@ -175,11 +175,6 @@ export default function App() {
     return `${window.location.origin}${window.location.pathname}?${p}`;
   }, [selectedVenue, datetime, sunnyOnly, amenityFilter]);
 
-  const sunnyCount = useMemo(
-    () => filteredVenues.filter(v => statusMap[v.id] === 'sunny').length,
-    [filteredVenues, statusMap],
-  );
-
   const totalSunny = useMemo(
     () => ALL_VENUES.filter(v => statusMap[v.id] === 'sunny').length,
     [statusMap],
