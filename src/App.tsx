@@ -8,11 +8,16 @@ import { FilterBar } from './components/FilterBar';
 import { useSunlight } from './hooks/useSunlight';
 import { reverseGeocode } from './lib/buildings';
 import { loadPrecomputed, getPrecomputedWindows, getStatusFromPrecomputed } from './lib/precomputed';
+import { distanceMeters } from './lib/geo';
 import type { Venue, Amenity, City, SunlightWindow, SunlightStatus } from './types';
 import venuesJson from './data/venues.json';
 import './App.css';
 
 const ALL_VENUES = venuesJson as Venue[];
+
+function formatDistance(m: number): string {
+  return m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`;
+}
 
 function formatTime(d: Date): string {
   return d.toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -37,6 +42,9 @@ export default function App() {
   const [amenityFilter, setAmenityFilter] = useState<'' | Amenity>('');
   const [cityFilter, setCityFilter] = useState<City[]>([]);
   const [sunnyOnly, setSunnyOnly] = useState(false);
+  const [nearMe, setNearMe] = useState(false);
+  const [locationPending, setLocationPending] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
   const [customPin, setCustomPin] = useState<Venue | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [precomputedReady, setPrecomputedReady] = useState(false);
@@ -72,6 +80,31 @@ export default function App() {
       return true;
     });
   }, [searchQuery, amenityFilter, cityFilter, sunnyOnly, statusMap]);
+
+  const handleNearMeChange = useCallback((v: boolean) => {
+    if (!v) { setNearMe(false); return; }
+    if (userLocation) { setNearMe(true); return; }
+    setLocationPending(true);
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setUserLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        setNearMe(true);
+        setLocationPending(false);
+      },
+      () => setLocationPending(false),
+      { enableHighAccuracy: true, timeout: 10_000 },
+    );
+  }, [userLocation]);
+
+  // Sort filtered venues by distance when "Near me" is active.
+  // Precompute distances once (Schwartzian transform) to avoid repeated calls in sort.
+  const [sortedVenues, distanceMap] = useMemo<[Venue[], Map<string, number> | null]>(() => {
+    if (!nearMe || !userLocation) return [filteredVenues, null];
+    const { lat, lon } = userLocation;
+    const pairs = filteredVenues.map(v => ({ v, d: distanceMeters(lat, lon, v.lat, v.lon) }));
+    pairs.sort((a, b) => a.d - b.d);
+    return [pairs.map(p => p.v), new Map(pairs.map(p => [p.v.id, p.d]))];
+  }, [filteredVenues, nearMe, userLocation]);
 
   const mapVenues = useMemo(() => {
     if (!customPin) return ALL_VENUES;
@@ -118,8 +151,8 @@ export default function App() {
   }, [selectedVenue, datetime, check]);
 
   const venueList = customPin
-    ? [customPin, ...filteredVenues]
-    : filteredVenues;
+    ? [customPin, ...sortedVenues]
+    : sortedVenues;
 
   const MAX_LIST = 200;
   const displayList = venueList.slice(0, MAX_LIST);
@@ -156,9 +189,12 @@ export default function App() {
             amenity={amenityFilter}
             cities={cityFilter}
             sunnyOnly={sunnyOnly}
+            nearMe={nearMe}
+            locationPending={locationPending}
             onAmenityChange={setAmenityFilter}
             onCitiesChange={setCityFilter}
             onSunnyOnlyChange={setSunnyOnly}
+            onNearMeChange={handleNearMeChange}
           />
         </div>
 
@@ -192,6 +228,7 @@ export default function App() {
             const endsAt = sunEndsIn(preWindows, datetime);
             const noSeating = venue.outdoor_seating === false;
             const unknownSeating = venue.outdoor_seating === null && !venue.isPin;
+            const dist = distanceMap?.get(venue.id);
 
             return (
               <li
@@ -208,7 +245,10 @@ export default function App() {
                   <div className="terrace-name">
                     {venue.isPin ? '📍 ' : ''}{venue.name}
                   </div>
-                  <div className="terrace-address">{venue.address || venue.city}</div>
+                  <div className="terrace-address">
+                    {dist != null && <span className="terrace-dist">{formatDistance(dist)} · </span>}
+                    {venue.address || venue.city}
+                  </div>
                   <div className="terrace-chips">
                     {noSeating && (
                       <span className="chip chip-no-seating">No terrace registered</span>

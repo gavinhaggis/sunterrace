@@ -179,6 +179,17 @@
   color: #fff;
 }
 
+.filter-pill-near.active {
+  background: #10b981;
+  border-color: #059669;
+  color: #fff;
+}
+
+.filter-pill:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .filter-chip {
   padding: 2px 9px;
   border-radius: 99px;
@@ -394,6 +405,11 @@
 }
 
 .terrace-item.no-seating .terrace-name { color: #9ca3af; }
+
+.terrace-dist {
+  color: #10b981;
+  font-weight: 600;
+}
 
 .terrace-address {
   font-size: 0.7rem;

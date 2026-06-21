@@ -14,12 +14,15 @@ interface Props {
   amenity: '' | Amenity;
   cities: City[];
   sunnyOnly: boolean;
+  nearMe: boolean;
+  locationPending: boolean;
   onAmenityChange: (a: '' | Amenity) => void;
   onCitiesChange: (c: City[]) => void;
   onSunnyOnlyChange: (v: boolean) => void;
+  onNearMeChange: (v: boolean) => void;
 }
 
-export function FilterBar({ amenity, cities, sunnyOnly, onAmenityChange, onCitiesChange, onSunnyOnlyChange }: Props) {
+export function FilterBar({ amenity, cities, sunnyOnly, nearMe, locationPending, onAmenityChange, onCitiesChange, onSunnyOnlyChange, onNearMeChange }: Props) {
   function toggleCity(city: City) {
     onCitiesChange(
       cities.includes(city) ? cities.filter(c => c !== city) : [...cities, city],
@@ -34,6 +37,13 @@ export function FilterBar({ amenity, cities, sunnyOnly, onAmenityChange, onCitie
           onClick={() => onSunnyOnlyChange(!sunnyOnly)}
         >
           ☀ Sunny now
+        </button>
+        <button
+          className={`filter-pill filter-pill-near${nearMe ? ' active' : ''}`}
+          onClick={() => onNearMeChange(!nearMe)}
+          disabled={locationPending}
+        >
+          {locationPending ? 'Locating…' : '⊙ Near me'}
         </button>
       </div>
       <div className="filter-row">
