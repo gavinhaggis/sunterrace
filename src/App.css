@@ -222,6 +222,32 @@
 .sun-panel.loading       { background: #f9fafb; border-left-color: #d1d5db; }
 .sun-panel.error         { background: #fef2f2; border-left-color: #ef4444; }
 
+.sun-panel-titlebar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.sun-panel-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.sun-panel-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #9ca3af;
+  padding: 0 3px;
+  line-height: 1.4;
+}
+
+.sun-panel-btn:hover { color: #374151; }
+
 .sun-panel-name {
   font-size: 0.78rem;
   font-weight: 600;
@@ -438,6 +464,7 @@
 .chip-no-seating     { background: #fef2f2; color: #b91c1c; }
 .chip-unknown-seating{ background: #f3f4f6; color: #9ca3af; }
 .chip-sun-ending     { background: #fff7ed; color: #c2410c; }
+.chip-next-sun       { background: #fefce8; color: #854d0e; }
 
 /* ── Status dot ───────────────────────────────────────── */
 .status-dot {
@@ -454,6 +481,140 @@
 
 /* Mobile drag handle (hidden on desktop) */
 .sheet-handle { display: none; }
+
+/* ── Compact top bar (title + datetime) ──────────────── */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.datetime-input {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: #111827;
+  padding: 4px 6px;
+  background: #f9fafb;
+  outline: none;
+  max-width: 170px;
+}
+
+.datetime-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+  background: #fff;
+}
+
+/* ── Search row ──────────────────────────────────────── */
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.search-row .search-bar {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Remove the count line inside search-bar when in search-row (space is tight) */
+.search-row .search-count { display: none; }
+
+/* ── Quick-filter icon buttons ───────────────────────── */
+.qbtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  font-size: 1rem;
+  color: #374151;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.qbtn:hover:not(:disabled) { background: #f3f4f6; }
+.qbtn:disabled { opacity: 0.5; cursor: default; }
+
+.qbtn.on-sun    { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+.qbtn.on-near   { background: #d1fae5; border-color: #10b981; color: #065f46; }
+.qbtn.on-filter { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; }
+
+.qbtn-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 99px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2px;
+}
+
+/* ── Map action buttons ───────────────────────────────── */
+.map-btns {
+  position: absolute;
+  bottom: 28px;
+  left: 12px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.map-pin-btn {
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 7px 13px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+
+.map-pin-btn:hover { background: #f9fafb; }
+
+.map-pin-btn.active-locate {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+.map-pin-btn.active-drop {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #fff;
+}
+
+/* Cursor while each pin mode is active */
+.map-container.pin-mode-locate .maplibregl-canvas { cursor: cell !important; }
+.map-container.pin-mode-drop   .maplibregl-canvas { cursor: crosshair !important; }
 
 /* ── Sun compass overlay ──────────────────────────────── */
 .sun-compass {
@@ -489,8 +650,113 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
+/* ── List headline ───────────────────────────────────── */
+.list-headline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 14px;
+  border-bottom: 1px solid #f3f4f6;
+  flex-shrink: 0;
+}
+
+.headline-sunny {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #d97706;
+}
+
+.headline-total {
+  font-size: 0.7rem;
+  color: #9ca3af;
+}
+
+/* ── Venue list row tweaks ───────────────────────────── */
+.terrace-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.terrace-name-row .terrace-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.terrace-item.is-fav .terrace-name { color: #92400e; }
+
+/* ── Favourite star button in list row ───────────────── */
+.star-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #d1d5db;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.1s;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.star-btn:hover { color: #f59e0b; }
+.star-btn.on    { color: #f59e0b; }
+
+/* ── SunPanel favourite button ───────────────────────── */
+.sun-panel-btn.fav-on { color: #f59e0b; }
+
+/* ── Best window — own row below status ──────────────── */
+.best-window-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #92400e;
+  background: #fef3c7;
+  border-radius: 5px;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+}
+
+.best-window-dur {
+  margin-left: auto;
+  font-weight: 400;
+  color: #b45309;
+}
+
+/* ── Panel → list separator ──────────────────────────── */
+.panel-list-sep {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+  padding: 6px 14px 4px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* ── Confirmed terrace pill ──────────────────────────── */
+.filter-pill-terrace.active {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #065f46;
+}
+
 /* ── Mobile: bottom sheet ─────────────────────────────── */
 @media (max-width: 768px) {
+  /* Move map action buttons above the sheet — sit below the sun compass */
+  .map-btns {
+    bottom: auto;
+    top: 88px;
+  }
+  .map-pin-btn {
+    font-size: 0.75rem;
+    padding: 5px 10px;
+  }
   .app {
     flex-direction: column;
     height: 100dvh;
@@ -550,4 +816,7 @@
   .terrace-item { padding: 12px 16px; min-height: 48px; }
   .datetime-picker input { font-size: 1rem; }
   .search-input { font-size: 1rem; }
+
+  /* The timeline bar already shows windows visually — chips are redundant on small screens */
+  .sun-timeline-legend { display: none; }
 }

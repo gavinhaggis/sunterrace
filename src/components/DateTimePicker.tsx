@@ -10,14 +10,12 @@ function toLocalString(date: Date): string {
 
 export function DateTimePicker({ value, onChange }: Props) {
   return (
-    <div className="datetime-picker">
-      <label htmlFor="datetime">Date &amp; time</label>
-      <input
-        id="datetime"
-        type="datetime-local"
-        value={toLocalString(value)}
-        onChange={e => onChange(new Date(e.target.value))}
-      />
-    </div>
+    <input
+      type="datetime-local"
+      className="datetime-input"
+      value={toLocalString(value)}
+      onChange={e => onChange(new Date(e.target.value))}
+      aria-label="Date and time"
+    />
   );
 }

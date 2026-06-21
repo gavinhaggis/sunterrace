@@ -13,16 +13,13 @@ const CITY_OPTIONS: City[] = ['Helsinki', 'Vantaa', 'Espoo'];
 interface Props {
   amenity: '' | Amenity;
   cities: City[];
-  sunnyOnly: boolean;
-  nearMe: boolean;
-  locationPending: boolean;
+  confirmedOnly: boolean;
   onAmenityChange: (a: '' | Amenity) => void;
   onCitiesChange: (c: City[]) => void;
-  onSunnyOnlyChange: (v: boolean) => void;
-  onNearMeChange: (v: boolean) => void;
+  onConfirmedOnlyChange: (v: boolean) => void;
 }
 
-export function FilterBar({ amenity, cities, sunnyOnly, nearMe, locationPending, onAmenityChange, onCitiesChange, onSunnyOnlyChange, onNearMeChange }: Props) {
+export function FilterBar({ amenity, cities, confirmedOnly, onAmenityChange, onCitiesChange, onConfirmedOnlyChange }: Props) {
   function toggleCity(city: City) {
     onCitiesChange(
       cities.includes(city) ? cities.filter(c => c !== city) : [...cities, city],
@@ -31,21 +28,6 @@ export function FilterBar({ amenity, cities, sunnyOnly, nearMe, locationPending,
 
   return (
     <div className="filter-bar">
-      <div className="filter-row">
-        <button
-          className={`filter-pill filter-pill-sun${sunnyOnly ? ' active' : ''}`}
-          onClick={() => onSunnyOnlyChange(!sunnyOnly)}
-        >
-          ☀ Sunny now
-        </button>
-        <button
-          className={`filter-pill filter-pill-near${nearMe ? ' active' : ''}`}
-          onClick={() => onNearMeChange(!nearMe)}
-          disabled={locationPending}
-        >
-          {locationPending ? 'Locating…' : '⊙ Near me'}
-        </button>
-      </div>
       <div className="filter-row">
         {AMENITY_OPTIONS.map(opt => (
           <button
@@ -67,6 +49,14 @@ export function FilterBar({ amenity, cities, sunnyOnly, nearMe, locationPending,
             {city}
           </button>
         ))}
+      </div>
+      <div className="filter-row">
+        <button
+          className={`filter-pill filter-pill-terrace${confirmedOnly ? ' active' : ''}`}
+          onClick={() => onConfirmedOnlyChange(!confirmedOnly)}
+        >
+          Confirmed terrace only
+        </button>
       </div>
     </div>
   );

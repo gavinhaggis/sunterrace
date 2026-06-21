@@ -1,7 +1,11 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Venue, SunlightStatus } from '../types';
+
+export interface TerracesMapHandle {
+  flyTo(lat: number, lon: number, paddingBottom?: number): void;
+}
 
 const STATUS_COLOR: Record<SunlightStatus, string> = {
   sunny:         '#f59e0b',
@@ -57,13 +61,30 @@ function buildGeoJSON(
 const SOURCE_ID = 'venues';
 const LAYER_ID  = 'venues-circles';
 
-export function TerracesMap({
+export const TerracesMap = forwardRef<TerracesMapHandle, Props>(function TerracesMap({
   terraces, statusMap, selectedId, onTerraceSelect, customPin, onMapClick,
-}: Props) {
+}, ref) {
   const containerRef  = useRef<HTMLDivElement>(null);
   const mapRef        = useRef<maplibregl.Map | null>(null);
   const mapReadyRef   = useRef(false);
   const pinMarkerRef  = useRef<maplibregl.Marker | null>(null);
+  const pendingFlyRef = useRef<{ lat: number; lon: number; paddingBottom: number } | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    flyTo(lat: number, lon: number, paddingBottom = 0) {
+      if (mapReadyRef.current && mapRef.current) {
+        mapRef.current.flyTo({
+          center: [lon, lat],
+          zoom: 15,
+          duration: 800,
+          padding: { top: 0, bottom: paddingBottom, left: 0, right: 0 },
+        });
+      } else {
+        // Map not loaded yet — queue and execute on load (no animation, just jump)
+        pendingFlyRef.current = { lat, lon, paddingBottom };
+      }
+    },
+  }));
 
   // Stable refs so async callbacks never capture stale closures
   const onTerraceSelectRef = useRef(onTerraceSelect);
@@ -126,6 +147,12 @@ export function TerracesMap({
       });
 
       mapReadyRef.current = true;
+
+      if (pendingFlyRef.current) {
+        const { lat, lon, paddingBottom } = pendingFlyRef.current;
+        map.jumpTo({ center: [lon, lat], zoom: 15, padding: { top: 0, bottom: paddingBottom, left: 0, right: 0 } });
+        pendingFlyRef.current = null;
+      }
 
       // Click a venue circle
       map.on('click', LAYER_ID, e => {
@@ -196,4 +223,4 @@ export function TerracesMap({
   }, [updatePin]);
 
   return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
-}
+});
