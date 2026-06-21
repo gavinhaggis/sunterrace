@@ -14,6 +14,13 @@ export function useSunlight() {
 
   const lastWindowKeyRef = useRef('');
 
+  const reset = useCallback(() => {
+    setResult(null);
+    setBuildings([]);
+    setError(null);
+    setLoading(false);
+  }, []);
+
   const check = useCallback(async (venue: Venue, datetime: Date): Promise<SunlightResult | null> => {
     setLoading(true);
     setError(null);
@@ -40,5 +47,5 @@ export function useSunlight() {
     }
   }, []);
 
-  return { check, loading, error, result, buildings, windows };
+  return { check, reset, loading, error, result, buildings, windows };
 }

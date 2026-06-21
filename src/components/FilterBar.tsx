@@ -13,11 +13,13 @@ const CITY_OPTIONS: City[] = ['Helsinki', 'Vantaa', 'Espoo'];
 interface Props {
   amenity: '' | Amenity;
   cities: City[];
+  sunnyOnly: boolean;
   onAmenityChange: (a: '' | Amenity) => void;
   onCitiesChange: (c: City[]) => void;
+  onSunnyOnlyChange: (v: boolean) => void;
 }
 
-export function FilterBar({ amenity, cities, onAmenityChange, onCitiesChange }: Props) {
+export function FilterBar({ amenity, cities, sunnyOnly, onAmenityChange, onCitiesChange, onSunnyOnlyChange }: Props) {
   function toggleCity(city: City) {
     onCitiesChange(
       cities.includes(city) ? cities.filter(c => c !== city) : [...cities, city],
@@ -26,6 +28,14 @@ export function FilterBar({ amenity, cities, onAmenityChange, onCitiesChange }: 
 
   return (
     <div className="filter-bar">
+      <div className="filter-row">
+        <button
+          className={`filter-pill filter-pill-sun${sunnyOnly ? ' active' : ''}`}
+          onClick={() => onSunnyOnlyChange(!sunnyOnly)}
+        >
+          ☀ Sunny now
+        </button>
+      </div>
       <div className="filter-row">
         {AMENITY_OPTIONS.map(opt => (
           <button

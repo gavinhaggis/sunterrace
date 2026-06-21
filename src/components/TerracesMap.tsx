@@ -97,6 +97,14 @@ export function TerracesMap({
       zoom: 13,
     });
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
+    map.addControl(
+      new maplibregl.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+        trackUserLocation: false,
+        showAccuracyCircle: false,
+      }),
+      'top-right',
+    );
 
     map.on('load', () => {
       // Single GeoJSON source + WebGL circle layer replaces 2805 DOM markers

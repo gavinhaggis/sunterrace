@@ -1,49 +1,53 @@
 import { useState } from 'react';
-import type { Building, SunlightResult, SunlightWindow, Venue } from '../types';
+import * as SunCalc from 'suncalc';
+import type { Building, SunlightResult, SunlightWindow, Venue, SunlightStatus } from '../types';
 import { SunDiagram } from './SunDiagram';
 import { SunTimeline } from './SunTimeline';
 
 interface Props {
   venue: Venue;
+  status: SunlightStatus;       // precomputed — instant, always available
+  windows: SunlightWindow[];    // precomputed windows for the timeline
+  datetime: Date;
+  // Diagram section — lazy, only populated after user opens the accordion
+  onRequestDiagram: () => void;
   result: SunlightResult | null;
   buildings: Building[];
-  windows: SunlightWindow[];
-  datetime: Date;
-  loading: boolean;
-  error: string | null;
+  diagramLoading: boolean;
+  diagramError: string | null;
 }
 
-const LABELS: Record<string, { icon: string; text: string }> = {
+const LABELS: Record<SunlightStatus, { icon: string; text: string }> = {
   sunny:         { icon: '☀️', text: 'In direct sunlight' },
   blocked:       { icon: '🏢', text: 'Blocked by building' },
   below_horizon: { icon: '🌙', text: 'Sun below horizon' },
+  unknown:       { icon: '?',  text: 'Unknown' },
 };
 
-export function SunPanel({ venue, result, buildings, windows, datetime, loading, error }: Props) {
+export function SunPanel({
+  venue, status, windows, datetime,
+  onRequestDiagram, result, buildings, diagramLoading, diagramError,
+}: Props) {
   const [showDiagram, setShowDiagram] = useState(false);
 
-  if (loading) {
-    return (
-      <div className="sun-panel loading">
-        <div className="sun-panel-name">{venue.name}</div>
-        <div className="sun-panel-status">Checking…</div>
-      </div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="sun-panel error">
-        <div className="sun-panel-name">{venue.name}</div>
-        <div className="sun-panel-status">⚠️ {error}</div>
-      </div>
-    );
-  }
-  if (!result) return null;
+  // Solar position computed locally — no network call needed for alt/az display
+  const pos    = SunCalc.getPosition(datetime, venue.lat, venue.lon);
+  const altDeg = (pos.altitude as unknown as number).toFixed(1);
+  const azDeg  = (pos.azimuth  as unknown as number).toFixed(1);
 
-  const { icon, text } = LABELS[result.reason] ?? { icon: '?', text: result.reason };
+  // After Overpass loads, upgrade status to accurate result
+  const displayStatus = (result?.reason as SunlightStatus | undefined) ?? status;
+  const { icon, text } = LABELS[displayStatus];
+
+  function handleToggleDiagram() {
+    const next = !showDiagram;
+    setShowDiagram(next);
+    // Trigger Overpass fetch the first time the accordion is opened
+    if (next && !result && !diagramLoading) onRequestDiagram();
+  }
 
   return (
-    <div className={`sun-panel ${result.reason}`}>
+    <div className={`sun-panel ${displayStatus}`}>
       <div className="sun-panel-name">
         {venue.isPin ? '📍 ' : ''}{venue.name}
       </div>
@@ -60,11 +64,11 @@ export function SunPanel({ venue, result, buildings, windows, datetime, loading,
       </div>
 
       <div className="sun-details">
-        <span>Alt {result.sunAltitude.toFixed(1)}°</span>
-        <span>Az {result.sunAzimuth.toFixed(1)}°</span>
+        <span>Alt {altDeg}°</span>
+        <span>Az {azDeg}°</span>
       </div>
 
-      {/* Primary: timeline */}
+      {/* Primary: timeline bar */}
       <div className="sun-timeline-section">
         <SunTimeline
           windows={windows}
@@ -74,10 +78,10 @@ export function SunPanel({ venue, result, buildings, windows, datetime, loading,
         />
       </div>
 
-      {/* Secondary: geometric cross-section (accordion) */}
+      {/* Secondary: building cross-section — fetched on demand */}
       <button
         className="details-toggle"
-        onClick={() => setShowDiagram(v => !v)}
+        onClick={handleToggleDiagram}
         aria-expanded={showDiagram}
       >
         {showDiagram ? '▲ Hide diagram' : '▼ Show obstruction diagram'}
@@ -85,12 +89,23 @@ export function SunPanel({ venue, result, buildings, windows, datetime, loading,
 
       {showDiagram && (
         <div className="sun-diagram-wrap">
-          <SunDiagram
-            solar={{ azimuth: result.sunAzimuth, altitude: result.sunAltitude }}
-            buildings={buildings}
-            lat={venue.lat}
-            lon={venue.lon}
-          />
+          {diagramLoading && (
+            <div className="diagram-loading">Checking nearby buildings…</div>
+          )}
+          {diagramError && (
+            <div className="diagram-error">⚠️ {diagramError}</div>
+          )}
+          {result && buildings.length > 0 && (
+            <SunDiagram
+              solar={{ azimuth: result.sunAzimuth, altitude: result.sunAltitude }}
+              buildings={buildings}
+              lat={venue.lat}
+              lon={venue.lon}
+            />
+          )}
+          {!diagramLoading && !diagramError && !result && (
+            <div className="diagram-loading">No result yet.</div>
+          )}
         </div>
       )}
     </div>

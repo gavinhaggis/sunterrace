@@ -1,6 +1,7 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { TerracesMap } from './components/TerracesMap';
 import { SunPanel } from './components/SunPanel';
+import { SunCompass } from './components/SunCompass';
 import { DateTimePicker } from './components/DateTimePicker';
 import { SearchBar } from './components/SearchBar';
 import { FilterBar } from './components/FilterBar';
@@ -35,12 +36,13 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [amenityFilter, setAmenityFilter] = useState<'' | Amenity>('');
   const [cityFilter, setCityFilter] = useState<City[]>([]);
+  const [sunnyOnly, setSunnyOnly] = useState(false);
   const [customPin, setCustomPin] = useState<Venue | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [precomputedReady, setPrecomputedReady] = useState(false);
-  const { check, loading, error, result, buildings, windows } = useSunlight();
+  const { check, reset, loading: diagramLoading, error: diagramError, result, buildings } = useSunlight();
 
-  // Load precomputed data, then colour all markers immediately
+  // Load precomputed data on mount
   useEffect(() => {
     loadPrecomputed()
       .then(() => setPrecomputedReady(true))
@@ -66,21 +68,32 @@ export default function App() {
       if (searchQuery && !v.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       if (amenityFilter && v.amenity !== amenityFilter) return false;
       if (cityFilter.length > 0 && !cityFilter.includes(v.city)) return false;
+      if (sunnyOnly && statusMap[v.id] !== 'sunny') return false;
       return true;
     });
-  }, [searchQuery, amenityFilter, cityFilter]);
+  }, [searchQuery, amenityFilter, cityFilter, sunnyOnly, statusMap]);
 
   const mapVenues = useMemo(() => {
     if (!customPin) return ALL_VENUES;
     return [...ALL_VENUES, customPin];
   }, [customPin]);
 
+  // Precomputed windows for the selected venue's timeline — instant, no network call
+  const panelWindows = useMemo(
+    () => (precomputedReady && selectedVenue
+      ? getPrecomputedWindows(selectedVenue.id, datetime)
+      : []),
+    [precomputedReady, selectedVenue, datetime],
+  );
+
   const handleVenueSelect = useCallback((venue: Venue) => {
+    reset();
     setSelectedVenue(venue);
     setSheetOpen(true);
-  }, []);
+  }, [reset]);
 
   const handleMapClick = useCallback(async (lat: number, lon: number) => {
+    reset();
     const name = await reverseGeocode(lat, lon);
     const pin: Venue = {
       id: 'custom-pin',
@@ -96,13 +109,12 @@ export default function App() {
     setCustomPin(pin);
     setSelectedVenue(pin);
     setSheetOpen(true);
-  }, []);
+  }, [reset]);
 
-  useEffect(() => {
+  // Fired when user opens the SunDiagram accordion for the first time on a venue
+  const handleRequestDiagram = useCallback(() => {
     if (!selectedVenue) return;
-    check(selectedVenue, datetime).then(res => {
-      if (res) setStatusMap(prev => ({ ...prev, [selectedVenue.id]: res.reason }));
-    });
+    check(selectedVenue, datetime);
   }, [selectedVenue, datetime, check]);
 
   const venueList = customPin
@@ -111,6 +123,10 @@ export default function App() {
 
   const MAX_LIST = 200;
   const displayList = venueList.slice(0, MAX_LIST);
+
+  // Compass uses selected venue coords when available, otherwise Helsinki centre
+  const compassLat = selectedVenue?.lat ?? 60.17;
+  const compassLon = selectedVenue?.lon ?? 24.94;
 
   return (
     <div className="app">
@@ -139,20 +155,25 @@ export default function App() {
           <FilterBar
             amenity={amenityFilter}
             cities={cityFilter}
+            sunnyOnly={sunnyOnly}
             onAmenityChange={setAmenityFilter}
             onCitiesChange={setCityFilter}
+            onSunnyOnlyChange={setSunnyOnly}
           />
         </div>
 
         {selectedVenue ? (
           <SunPanel
+            key={selectedVenue.id}
             venue={selectedVenue}
+            status={statusMap[selectedVenue.id] ?? 'unknown'}
+            windows={panelWindows}
+            datetime={datetime}
+            onRequestDiagram={handleRequestDiagram}
             result={result}
             buildings={buildings}
-            windows={windows}
-            datetime={datetime}
-            loading={loading}
-            error={error}
+            diagramLoading={diagramLoading}
+            diagramError={diagramError}
           />
         ) : (
           <div className="sidebar-hint">
@@ -220,6 +241,7 @@ export default function App() {
           customPin={customPin}
           onMapClick={handleMapClick}
         />
+        <SunCompass datetime={datetime} lat={compassLat} lon={compassLon} />
       </main>
     </div>
   );
