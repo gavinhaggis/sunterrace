@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { TerracesMap } from './components/TerracesMap';
 import { SunPanel } from './components/SunPanel';
 import { SunCompass } from './components/SunCompass';
